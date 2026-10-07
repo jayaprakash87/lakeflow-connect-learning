@@ -7,14 +7,25 @@ Kafka topic: efuse-events
         ↓
 lab_kafka_connection
         ↓
-Lakeflow Connect ingestion pipeline
+Lakeflow Connect managed Kafka ingestion pipeline
         ↓
 bronze.efuse_events_managed
 ```
 
-## Core connector configuration
+## Important Beta limitation
 
-For the first run, keep the connector behavior simple:
+At the time of this lab, **UI-based pipeline authoring is not supported for the managed Kafka connector**.
+
+Create the ingestion pipeline using either:
+
+1. a **Databricks notebook**, or
+2. **Declarative Automation Bundles**.
+
+For learning, start with the notebook path because it exposes the connector definition without adding bundle/deployment complexity. Later we can reproduce the same pipeline with a bundle.
+
+## Core connector intent
+
+For the first run, keep the behavior simple:
 
 ```text
 connection: lab_kafka_connection
@@ -24,42 +35,39 @@ mode: continuous
 destination: bronze.efuse_events_managed
 ```
 
-Using `earliest` for the first lab makes the experiment observable because existing test messages are ingested. The starting offset matters only when no checkpoint exists.
-
-## Important behavior to observe
-
-The managed Kafka connector continuously reads Kafka and writes into a Databricks streaming table.
-
-The first version of this lab should preserve the source payload with minimal transformation. We do not want parsing logic to distract from ingestion behavior.
-
-Kafka metadata such as topic, partition, offset, and timestamp is not necessarily included as separate destination columns by default. If we need it for the recovery experiment, enable the connector's source metadata column option.
+Using `earliest` makes the experiment observable because existing test messages are ingested. The starting offset is used only when no checkpoint exists.
 
 ## Why continuous mode?
 
-Kafka is an event stream, so the managed Kafka connector is intended to run continuously rather than as a batch copy job.
+Kafka is an event stream. The managed Kafka connector continuously reads from one or more topics and writes to streaming tables.
 
-This is a major conceptual difference from a typical scheduled file-copy pipeline.
+## Destination semantics
 
-## What Databricks is now operating
+Each configured Kafka topic is ingested into a Databricks streaming table.
 
-After the pipeline is created, identify these objects in the workspace:
+The connector writes message key and value to the destination. Kafka metadata such as topic, partition, offset, timestamp, timestamp type, and headers is not included by default.
+
+For our recovery lab we should enable a `source_metadata_column` so we can inspect offsets and prove what happens across restart.
+
+## What Databricks is operating
+
+After creation, identify:
 
 1. Unity Catalog connection
-2. ingestion pipeline
-3. serverless runtime used by the ingestion pipeline
+2. managed ingestion pipeline
+3. serverless ingestion runtime
 4. destination streaming table
-5. monitoring/event information for the pipeline
+5. pipeline monitoring/event information
 
 ## Success criterion
 
-Produce three test events to `efuse-events`.
+Produce several test events to `efuse-events`.
 
-Then run:
+Then query:
 
 ```sql
 SELECT *
-FROM bronze.efuse_events_managed
-ORDER BY event_ts;
+FROM bronze.efuse_events_managed;
 ```
 
-The exact destination columns depend on the connector transform configuration. Record the observed schema rather than assuming it.
+Record the actual destination schema rather than assuming it.
