@@ -1,22 +1,26 @@
 # Learning architecture
 
+The first comparison uses the **same Google Drive folder** on both paths.
+
 ```mermaid
 flowchart LR
-    G[Synthetic eFuse event generator] --> K[Kafka topic: efuse-events]
+    G[Google Drive folder<br/>eFuse JSON files]
 
-    K --> M[Lakeflow Connect managed connector]
+    G --> M[Managed Google Drive connector]
     M --> BM[bronze.efuse_events_managed]
 
-    K --> S[Spark Structured Streaming]
+    G --> S[Standard Google Drive connector<br/>read_files / Auto Loader]
     S --> P[Lakeflow Pipeline]
     P --> BS[bronze.efuse_events_standard]
 
-    BM --> C[Compare behavior]
+    BM --> C[Compare responsibility boundary]
     BS --> C
 
-    C --> R[Restart / recovery]
+    C --> I[Incremental state / restart]
     C --> E[Schema evolution]
-    C --> O[Operational ownership]
+    C --> O[Monitoring / operations]
 ```
 
-Both paths must ingest the same logical event so that differences are attributable to the ingestion approach rather than the data.
+The source data stays constant. The main variable is the ingestion abstraction.
+
+Kafka is retained later as an advanced streaming-specific experiment.
