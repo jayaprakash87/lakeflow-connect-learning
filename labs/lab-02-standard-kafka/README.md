@@ -2,19 +2,41 @@
 
 ## Objective
 
-Ingest the same `efuse-events` topic using Spark Structured Streaming in a Lakeflow pipeline.
+Ingest the same efuse-events topic with the standard Kafka source in Spark Structured Streaming / Lakeflow pipelines.
 
 ## Target
 
-`bronze.efuse_events_standard`
+bronze.efuse_events_standard
 
-## Principle
+## Critical experimental rule
 
-The source event and desired output are intentionally the same as Lab 01. Only the ingestion abstraction changes.
+Lab 01 and Lab 02 must have the same Bronze contract:
+
+~~~text
+key               BINARY
+value             BINARY
+_kafka_metadata   STRUCT
+~~~
+
+We deliberately do not parse the eFuse JSON during ingestion.
+
+If one path performs business parsing and the other does not, we would be comparing ingestion and transformation at the same time. That would make the experiment invalid.
+
+## Architecture
+
+~~~text
+Kafka topic: efuse-events
+        ↓
+Spark Structured Streaming Kafka source
+        ↓
+Lakeflow pipeline
+        ↓
+bronze.efuse_events_standard
+~~~
 
 ## Starting point
 
-See `src/standard_ingestion/kafka_to_bronze.py`.
+See src/standard_ingestion/kafka_to_bronze.py.
 
 ## Observation log
 
@@ -22,8 +44,18 @@ See `src/standard_ingestion/kafka_to_bronze.py`.
 |---|---|
 | How much code did we write? | |
 | Which Kafka options did we configure? | |
-| How is state/checkpointing handled? | |
-| Who owns retries/recovery? | |
-| Who owns schema parsing? | |
-| Who owns runtime? | |
+| Where did authentication configuration live? | |
+| How is starting offset configured? | |
+| How is ongoing state/checkpointing handled? | |
+| Who owns recovery behavior? | |
+| Who creates the destination table? | |
+| Who owns runtime configuration? | |
 | How is monitoring exposed? | |
+
+## Why this lab matters
+
+Both paths ultimately use streaming machinery. The question is not whether streaming exists underneath.
+
+The question is:
+
+> Which pieces are exposed to us as application/pipeline engineering concerns, and which pieces are hidden behind the managed connector abstraction?
