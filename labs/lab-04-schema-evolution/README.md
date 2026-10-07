@@ -1,6 +1,8 @@
 # Lab 04 — Schema evolution
 
-## Baseline event
+## Baseline
+
+Start with JSON files containing:
 
 ```json
 {
@@ -15,7 +17,7 @@
 
 ## Change
 
-Add:
+Add a new file whose records also contain:
 
 ```json
 "temperature_c": 62
@@ -23,11 +25,15 @@ Add:
 
 ## Compare
 
-- Does ingestion continue?
-- Does the target schema change automatically?
-- Is the field ignored, rescued, or rejected?
-- Is configuration required?
-- Is a restart required?
-- What is visible in monitoring?
+For managed and standard ingestion, record:
 
-Do not assume the two paths should behave identically. The purpose is to observe their defined schema semantics.
+- Does ingestion continue?
+- Does the destination schema change?
+- Which schema-evolution option controls the behavior?
+- Can new columns be rescued instead of added?
+- Can the pipeline be configured to fail on new columns?
+- Is a restart or full refresh required?
+
+## Learning target
+
+Both approaches can support schema evolution. The key question is **where the behavior is configured and who owns the ingestion logic**.
