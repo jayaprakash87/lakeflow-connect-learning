@@ -1,37 +1,53 @@
 # Databricks Lakeflow Connect Learning Lab
 
-A hands-on repository for understanding **managed ingestion** in Databricks by implementing the same ingestion problem at different abstraction levels.
+A hands-on repository for understanding **managed ingestion** by implementing the same source with different levels of Databricks management.
 
 ## Core learning question
 
-> What does Databricks manage when we move from custom/standard ingestion to a managed Lakeflow Connect connector?
+> What responsibility moves from us to Databricks when we move from a standard connector to a managed Lakeflow Connect connector?
 
-The repo intentionally keeps the use case simple so we can focus on ownership boundaries: connection management, runtime, offsets/checkpoints, retries, recovery, schema handling, monitoring, and target-table semantics.
+## First executable comparison: Google Drive
 
-## Learning path
+We deliberately changed the first lab away from Kafka because a hosted Kafka service adds an unnecessary external-service/payment dependency.
 
-1. **Lab 01 — Managed Kafka ingestion**
-   - Kafka topic `efuse-events`
-   - Lakeflow Connect managed Kafka connector
-   - Target: `bronze.efuse_events_managed`
+Google Drive is a better first experiment because Databricks supports **both**:
 
-2. **Lab 02 — Standard/custom Kafka ingestion**
-   - Same Kafka topic
-   - Spark Structured Streaming in a Lakeflow pipeline
-   - Target: `bronze.efuse_events_standard`
+- a managed Google Drive connector; and
+- a standard Google Drive connector using Spark/SQL APIs.
 
-3. **Lab 03 — Restart and recovery**
-   - Stop/restart both implementations
-   - Compare offset/state/recovery behavior
+Both can use the same Unity Catalog Google Drive connection and the same source folder. That gives us a controlled comparison without running Kafka infrastructure.
+
+### Learning path
+
+1. **Lab 01 — Managed Google Drive**
+   - Same Google Drive folder
+   - Managed Lakeflow Connect connector
+   - Destination: `bronze.efuse_events_managed`
+
+2. **Lab 02 — Standard Google Drive**
+   - Same Google Drive folder
+   - `read_files` / Auto Loader in a Lakeflow pipeline
+   - Destination: `bronze.efuse_events_standard`
+
+3. **Lab 03 — Incremental state and restart**
+   - Add files after the first run
+   - Restart both paths
+   - Observe what is remembered and where
 
 4. **Lab 04 — Schema evolution**
-   - Add `temperature_c` to the source event
-   - Observe how each implementation behaves
+   - Add `temperature_c`
+   - Compare managed vs explicit schema behavior
 
 5. **Lab 05 — PostgreSQL CDC**
-   - Repeat the managed-ingestion concept with database CDC
+   - Extend the concept to database CDC
 
-## Reference event
+6. **Lab 06 — Managed Kafka**
+   - Optional advanced streaming experiment
+
+7. **Lab 07 — Standard Kafka**
+   - Same Kafka source using Structured Streaming
+
+## Reference eFuse data
 
 ```json
 {
@@ -46,22 +62,18 @@ The repo intentionally keeps the use case simple so we can focus on ownership bo
 
 ## Comparison framework
 
-Every lab should answer the same questions:
-
-| Responsibility | Managed connector | Standard/custom |
+| Responsibility | Managed connector | Standard connector |
 |---|---|---|
-| Define source | Us | Us |
-| Define target | Us | Us |
-| Write ingestion code | Minimal / none | Yes |
-| Source protocol knowledge | Mostly Databricks | Us |
-| Offset/checkpoint mechanics | Managed | Explicit Spark semantics |
-| Retry/recovery | Managed | More ownership on us |
-| Schema handling | Connector-specific managed behavior | Explicit design |
-| Runtime | Managed/serverless where supported | Pipeline compute/runtime |
-| Monitoring | Managed pipeline UX | Pipeline/Spark monitoring |
+| Connection/authentication | Governed connection | Governed connection |
+| Source-specific ingestion definition | Configuration | Spark/SQL code |
+| Incremental file discovery | Managed | Auto Loader/read_files semantics |
+| Retry/recovery | More managed | More visible to us |
+| Schema evolution | Connector configuration | Explicit pipeline options |
+| Runtime | Managed/serverless | Lakeflow pipeline runtime |
+| Monitoring | Managed pipeline | Pipeline/Spark monitoring |
 | Flexibility | Lower | Higher |
 | Operational burden | Lower | Higher |
 
 ## Design principle
 
-This is a learning lab, not a production template. CI/CD, Terraform, complex packaging, and enterprise deployment patterns are intentionally deferred until the ingestion concepts are clear.
+This is a controlled learning lab, not a production template. We intentionally postpone Terraform, CI/CD, complex packaging, and production networking until the ingestion abstraction is understood.
