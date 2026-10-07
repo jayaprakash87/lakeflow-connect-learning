@@ -1,29 +1,15 @@
-"""Lab 02 skeleton: Kafka -> Databricks using Structured Streaming.
+"""Lab 02: Kafka -> Databricks using Structured Streaming.
 
-Values are placeholders until the Kafka environment and Databricks connection
-details are available.
+This intentionally preserves the same Bronze contract as Lab 01:
+- key: BINARY
+- value: BINARY
+- Kafka source metadata
+
+Business JSON parsing is deliberately deferred so the experiment compares
+ingestion ownership rather than transformation logic.
 """
 
 from pyspark.sql import functions as F
-from pyspark.sql.types import (
-    DoubleType,
-    IntegerType,
-    StringType,
-    StructField,
-    StructType,
-)
-
-
-event_schema = StructType(
-    [
-        StructField("vehicle_id", StringType(), False),
-        StructField("fuse_id", StringType(), False),
-        StructField("current_a", DoubleType(), True),
-        StructField("voltage_v", DoubleType(), True),
-        StructField("switch_state", IntegerType(), True),
-        StructField("event_ts", StringType(), False),
-    ]
-)
 
 
 raw = (
@@ -31,20 +17,23 @@ raw = (
     .format("kafka")
     .option("kafka.bootstrap.servers", "<bootstrap-servers>")
     .option("subscribe", "efuse-events")
-    .option("startingOffsets", "latest")
+    .option("startingOffsets", "earliest")
     .load()
 )
 
-parsed = (
-    raw.select(
-        F.from_json(F.col("value").cast("string"), event_schema).alias("event"),
-        F.col("topic"),
-        F.col("partition"),
-        F.col("offset"),
-        F.col("timestamp").alias("kafka_timestamp"),
-    )
-    .select("event.*", "topic", "partition", "offset", "kafka_timestamp")
+bronze = raw.select(
+    F.col("key"),
+    F.col("value"),
+    F.struct(
+        F.col("topic").alias("topic"),
+        F.col("partition").alias("partition"),
+        F.col("offset").alias("offset"),
+        F.col("timestamp").alias("timestamp"),
+        F.col("timestampType").alias("timestampType"),
+        F.col("headers").alias("headers"),
+    ).alias("_kafka_metadata"),
 )
 
-# The exact Lakeflow pipeline declaration/writer will be added when the
-# workspace/runtime style for the lab is selected.
+# In a Lakeflow pipeline, expose the bronze DataFrame as the streaming table.
+# Authentication is deliberately not hard-coded; Lab 02 will configure it
+# securely and compare that responsibility with Lab 01's UC Connection.
