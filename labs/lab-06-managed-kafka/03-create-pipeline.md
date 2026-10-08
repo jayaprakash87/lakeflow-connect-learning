@@ -1,73 +1,191 @@
-# Lab 06 — Create the managed Kafka ingestion pipeline
+# Lab 06 — Create the managed Kafka pipeline
 
-## Target architecture
+## Important UI difference
+
+Unlike Google Drive and PostgreSQL, the managed Kafka connector currently does **not** support UI-based pipeline authoring in Beta.
+
+Do not go to:
 
 ```text
-Kafka topic: efuse-events
+Jobs & pipelines
+  → Create
+  → Ingestion pipeline
+```
+
+expecting a Kafka wizard.
+
+Instead use:
+
+```text
+Declarative Automation Bundle
+```
+
+for this lab.
+
+---
+
+# Pipeline architecture
+
+```text
+Kafka: efuse-events
         ↓
 lab_kafka_connection
         ↓
-Lakeflow Connect managed Kafka ingestion pipeline
+lab-managed-kafka-efuse
         ↓
-bronze.efuse_events_managed
+<catalog>.bronze.efuse_events_managed
 ```
 
-## Important Beta limitation
+---
 
-At the time of this lab, **UI-based pipeline authoring is not supported for the managed Kafka connector**.
+# Step 1 — Review the bundle
 
-Create the ingestion pipeline using either:
-
-1. a **Databricks notebook**, or
-2. **Declarative Automation Bundles**.
-
-For learning, start with the notebook path because it exposes the connector definition without adding bundle/deployment complexity. Later we can reproduce the same pipeline with a bundle.
-
-## Core connector intent
-
-For the first run, keep the behavior simple:
+The lab contains:
 
 ```text
-connection: lab_kafka_connection
-topic: efuse-events
-starting offset: earliest
-mode: continuous
-destination: bronze.efuse_events_managed
+databricks.yml
+kafka_managed_pipeline.yml
 ```
 
-Using `earliest` makes the experiment observable because existing test messages are ingested. The starting offset is used only when no checkpoint exists.
+The important pipeline definition is:
 
-## Why continuous mode?
+```yaml
+resources:
+  pipelines:
+    managed_kafka_efuse:
+      name: lakeflow-managed-kafka-efuse
+      serverless: true
+      continuous: true
+      channel: PREVIEW
+      catalog: ${var.dest_catalog}
+      target: ${var.dest_schema}
+      ingestion_definition:
+        connection_name: ${var.connection_name}
+        objects:
+          - table:
+              source_table: N/A
+              destination_catalog: ${var.dest_catalog}
+              destination_schema: ${var.dest_schema}
+              destination_table: efuse_events_managed
+              table_configuration:
+                source_metadata_column: _kafka_metadata
+              connector_options:
+                kafka_options:
+                  topics:
+                    - efuse-events
+                  starting_offset: earliest
+```
 
-Kafka is an event stream. The managed Kafka connector continuously reads from one or more topics and writes to streaming tables.
+---
 
-## Destination semantics
+# Step 2 — Understand each setting
 
-Each configured Kafka topic is ingested into a Databricks streaming table.
+## `serverless: true`
 
-The connector writes message key and value to the destination. Kafka metadata such as topic, partition, offset, timestamp, timestamp type, and headers is not included by default.
+Databricks operates the ingestion compute.
 
-For our recovery lab we should enable a `source_metadata_column` so we can inspect offsets and prove what happens across restart.
+## `continuous: true`
 
-## What Databricks is operating
+The pipeline stays active and consumes Kafka as events arrive.
 
-After creation, identify:
+This is different from the Google Drive experiments, where we manually triggered pipeline updates.
 
-1. Unity Catalog connection
-2. managed ingestion pipeline
-3. serverless ingestion runtime
-4. destination streaming table
-5. pipeline monitoring/event information
+## `channel: PREVIEW`
 
-## Success criterion
+Required for this Beta connector.
 
-Produce several test events to `efuse-events`.
+## `connection_name`
 
-Then query:
+References the Unity Catalog connection.
+
+No raw credentials appear in YAML.
+
+## `topics`
+
+Subscribes to:
+
+```text
+efuse-events
+```
+
+## `starting_offset: earliest`
+
+When **no checkpoint exists**, consume from the earliest retained message.
+
+Default behavior would otherwise be `latest`.
+
+This setting is relevant only on the first state initialization.
+
+## `source_metadata_column`
+
+Adds:
+
+```text
+_kafka_metadata
+```
+
+containing:
+
+- topic
+- partition
+- offset
+- timestamp
+- timestampType
+- headers
+
+We enable this specifically so we can prove restart and offset behavior.
+
+---
+
+# Step 3 — Raw destination schema
+
+Without a transformer, Kafka message data lands as:
+
+```text
+key   BINARY
+value BINARY
+```
+
+plus our metadata struct.
+
+That is deliberate.
+
+Lab 06 first studies ingestion mechanics.
+
+JSON parsing is a separate concern and is tested later in `09-json-transformer.md`.
+
+---
+
+# Step 4 — Deploy
+
+Follow:
+
+```text
+07-deploy-with-bundle.md
+```
+
+After deployment, find:
+
+```text
+Jobs & pipelines
+  → lakeflow-managed-kafka-efuse
+```
+
+and verify that it is continuous/serverless.
+
+---
+
+# Success criterion
+
+Once the test producer sends records, this query returns rows:
 
 ```sql
 SELECT *
-FROM bronze.efuse_events_managed;
+FROM <catalog>.bronze.efuse_events_managed;
 ```
 
-Record the actual destination schema rather than assuming it.
+and the Kafka offsets are visible in:
+
+```text
+_kafka_metadata.offset
+```
