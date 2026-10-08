@@ -1,21 +1,23 @@
 # Lab 01 — Managed Google Drive ingestion
 
-## Why this is the first executable lab
+## Objective
 
-Google Drive lets us study the managed-ingestion abstraction without provisioning a paid Kafka service.
+Ingest structured eFuse JSON files from a Google Drive folder using the **managed Lakeflow Connect Google Drive connector**.
 
-Databricks supports a managed Google Drive connector that handles source authentication, incremental reads, retries, schema handling, and destination writes through a managed ingestion pipeline.
+## Why this is first
 
-## Controlled source
+Databricks provides both managed and standard Google Drive connectors, so we can compare two ingestion abstractions against the same source without provisioning a paid external streaming service.
 
-Create one Google Drive folder, for example:
+## Source
+
+Create one Google Drive folder:
 
 ```text
 lakeflow-connect-learning/
   batch-001.json
 ```
 
-Use the repository's sample eFuse JSON as the content.
+Use `sample-data/efuse-events.json` as the contents of `batch-001.json`.
 
 ## Target
 
@@ -23,54 +25,51 @@ Use the repository's sample eFuse JSON as the content.
 bronze.efuse_events_managed
 ```
 
-## Connection
+## Prerequisites
 
-Create a Unity Catalog Google Drive connection.
+- Unity Catalog enabled
+- serverless compute enabled
+- `CREATE CONNECTION` to create the connection, or `USE CONNECTION` on an existing one
+- a Google account with read access to the source folder
 
-Prefer **Databricks-managed OAuth U2M** if your workspace exposes it. This requires no Google Cloud project or custom OAuth app.
+## Authentication
+
+Prefer **OAuth U2M: Databricks-managed** when it is available in the workspace. It requires no Google Cloud project or custom OAuth app.
+
+## Managed pipeline configuration
 
 Conceptually:
 
 ```text
-Google account
-    ↓ OAuth
-Unity Catalog connection
-    ↓
-Managed ingestion pipeline
-    ↓
-bronze.efuse_events_managed
+Connection: lab_google_drive_connection
+Entity: FILE
+URL: <Google Drive folder URL>
+Format: JSON
+Schema evolution: ADD_NEW_COLUMNS_WITH_TYPE_WIDENING (default)
+Destination: bronze.efuse_events_managed
 ```
 
-## Pipeline intent
-
-Configure the managed connector to:
-
-- read the Google Drive folder;
-- interpret files as JSON;
-- ingest incrementally;
-- write to the managed destination table.
-
-## What we do NOT write
+## What we do not write
 
 We do not write:
 
-- `spark.read`
 - `read_files`
-- Auto Loader configuration
-- file discovery logic
+- `spark.readStream`
+- Auto Loader code
+- file-discovery logic
 - retry loops
-- ingestion checkpoint code
+- checkpoint-path code
 
-That absence is the key learning point.
+That absence is the learning point.
 
 ## Observation table
 
 | Question | Observation |
 |---|---|
 | How was authentication configured? | |
-| How was the source folder selected? | |
-| How was JSON format configured? | |
-| Where is schema evolution configured? | |
+| How was the folder selected? | |
+| Where was JSON format configured? | |
+| Where was schema evolution configured? | |
 | How is incremental progress maintained? | |
 | What retry/recovery controls are exposed? | |
 | What objects did Databricks create? | |
