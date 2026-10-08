@@ -19,23 +19,32 @@ Google Drive
    ↓
 read_files / Auto Loader
    ↓
-Lakeflow pipeline
+Lakeflow ETL pipeline
    ↓
 bronze.efuse_events_standard
 ```
 
 ## Important difference from Lab 01
 
-For the standard Google Drive connector, Databricks currently does **not** support creating this custom ingestion pipeline through the same ingestion wizard.
+For Lab 02, **do not create an Ingestion pipeline**.
 
-Databricks documents the standard Google Drive approach as **API/code based**. In practice, for this lab, create a normal Lakeflow pipeline and attach our SQL file.
+In the current Databricks UI:
 
-Requirements:
+```text
+Jobs & pipelines
+  → Create new
+      → ETL pipeline
+```
 
-- Databricks Runtime 17.3+
-- pipeline channel = `PREVIEW`
-- existing Unity Catalog Google Drive connection
-- target catalog/schema privileges
+Choose **ETL pipeline**.
+
+Why:
+
+- **Ingestion pipeline** = managed connector path used in Lab 01
+- **ETL pipeline** = SQL/Python pipeline where we explicitly write ingestion logic
+- **Job** = orchestration of notebooks, pipelines, queries, etc.
+
+This UI choice is the first visible manifestation of the managed-vs-standard distinction.
 
 ## Step-by-step execution
 
@@ -49,26 +58,37 @@ lab_google_drive_connection
 
 Do not create another Google Drive connection.
 
-This is deliberate: authentication stays constant while the ingestion abstraction changes.
+This keeps authentication constant while only the ingestion abstraction changes.
 
 ---
 
-### Step 2 — Create a new Lakeflow pipeline
+### Step 2 — Create the correct pipeline type
 
-In Databricks, go to the Lakeflow / Jobs & Pipelines area and create a new **pipeline**.
-
-Use:
+Go to:
 
 ```text
+Jobs & pipelines
+  → Create new
+  → ETL pipeline
+```
+
+Do **not** choose:
+
+```text
+Ingestion pipeline
+```
+
+That would take us back to the managed connector path from Lab 01.
+
 Pipeline name:
+
+```text
 lab-standard-gdrive-efuse
 ```
 
-This is a standard Lakeflow pipeline, not the managed Google Drive ingestion wizard used in Lab 01.
-
 ---
 
-### Step 3 — Configure the pipeline
+### Step 3 — Configure the ETL pipeline
 
 Set:
 
@@ -76,9 +96,7 @@ Set:
 Channel: PREVIEW
 ```
 
-For destination defaults, use the same learning catalog/schema pattern as Lab 01.
-
-Recommended:
+Recommended destination defaults:
 
 ```text
 Catalog: main
@@ -91,7 +109,7 @@ If your workspace uses another learning catalog, substitute it consistently.
 
 ### Step 4 — Add the source URL as pipeline configuration
 
-Do not hardcode the Google Drive URL in the SQL.
+Do not hardcode the Google Drive URL in SQL.
 
 In the pipeline configuration / advanced configuration section, add:
 
@@ -100,25 +118,23 @@ Key:   lab.source_url
 Value: <your Google Drive folder URL>
 ```
 
-For your current lab:
+For the current lab:
 
 ```text
 https://drive.google.com/drive/u/0/folders/1j26GKyWwByLrYnylUK8H48scvy-m-swj
 ```
 
-This keeps workspace-specific values out of committed code.
-
 ---
 
-### Step 5 — Add the SQL source file
+### Step 5 — Add the SQL source
 
-Use the SQL in:
+Use:
 
 ```text
 labs/lab-02-standard-google-drive/standard_ingestion.sql
 ```
 
-The core logic is:
+Core logic:
 
 ```sql
 CREATE OR REFRESH STREAMING TABLE bronze.efuse_events_standard
@@ -131,11 +147,10 @@ FROM STREAM read_files(
 );
 ```
 
-This is the key point of Lab 02:
+This is the key difference from Lab 01:
 
-> We are now explicitly authoring the ingestion behavior.
-
-In Lab 01, the managed connector generated/operated this ingestion logic for us.
+> In Lab 01, the managed connector owned the ingestion implementation.  
+> In Lab 02, we explicitly author the ingestion logic.
 
 ---
 
@@ -147,7 +162,7 @@ Run:
 lab-standard-gdrive-efuse
 ```
 
-The pipeline should incrementally discover the JSON files in the same Google Drive folder.
+The pipeline should incrementally discover the same JSON files in the same Google Drive folder.
 
 ---
 
@@ -175,10 +190,9 @@ With the current sample file, the expected row count is:
 
 ### Step 8 — Compare with Lab 01
 
-Now compare:
-
 | Responsibility | Lab 01 managed | Lab 02 standard |
 |---|---|---|
+| Pipeline type in UI | Ingestion pipeline | ETL pipeline |
 | Google Drive connection | Configure | Reuse |
 | Folder URL | Wizard configuration | Pipeline configuration |
 | JSON format | Wizard configuration | SQL |
