@@ -1,22 +1,40 @@
-# Lab 06 — Managed Kafka (advanced)
+# Lab 06 — Managed Kafka ingestion (advanced)
 
-Kafka is retained as an advanced streaming experiment after the Google Drive managed-vs-standard comparison.
+This lab revisits managed ingestion with a **continuous event stream** after the Google Drive and CDC concepts are understood.
 
-The detailed Kafka material was originally authored under:
+## Why Kafka is later
+
+The connector requires a Kafka endpoint reachable from Databricks serverless compute. That infrastructure requirement is useful later, but it is unnecessary friction for the first managed-ingestion experiment.
+
+## Lab contents
+
+1. `00-environment-plan.md`
+2. `01-prerequisites.md`
+3. `02-create-connection.md`
+4. `03-create-pipeline.md`
+5. `04-what-is-managed.md`
+6. `05-validation-queries.sql`
+7. `06-produce-test-events.md`
+8. `07-deploy-with-bundle.md`
+
+Supporting files:
 
 ```text
-labs/lab-01-managed-kafka/
+.env.example
+requirements.txt
+databricks.yml
+kafka_managed_pipeline.yml
 ```
 
-Use that material when we reach Lab 06. It covers:
+## Learning focus
 
-- environment planning;
-- Kafka prerequisites;
-- Unity Catalog connection;
-- managed Kafka pipeline;
-- responsibility-boundary analysis;
-- validation queries;
-- test-event production;
-- bundle deployment.
+Kafka makes several managed responsibilities especially visible:
 
-We intentionally do not execute this lab first because it requires a Kafka endpoint reachable from Databricks serverless compute.
+- source authentication;
+- consumer lifecycle;
+- starting offsets;
+- checkpointed progress;
+- restart behavior;
+- continuous serverless runtime;
+- source metadata;
+- append-only destination semantics.
