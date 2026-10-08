@@ -1,14 +1,12 @@
--- Lab 02: standard Google Drive connector
+-- Lab 02 — Standard Google Drive ingestion
+--
 -- Requirements:
 --   Databricks Runtime 17.3+
 --   Lakeflow pipeline channel = PREVIEW
+--   Existing UC connection: lab_google_drive_connection
 --
--- This source URL is configurable. In the pipeline settings, add:
---
---   Key:   lab.source_url
---   Value: https://drive.google.com/drive/u/0/folders/...
---
--- Then the SQL below reads that pipeline configuration value.
+-- Pipeline configuration:
+--   lab.source_url = <Google Drive folder URL>
 
 CREATE OR REFRESH STREAMING TABLE bronze.efuse_events_standard
 AS
