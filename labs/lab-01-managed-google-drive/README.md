@@ -1,23 +1,22 @@
 # Lab 01 — Managed Google Drive ingestion
 
+## Status
+
+**Completed successfully.** The managed Google Drive ingestion pipeline was created and executed successfully.
+
 ## Objective
 
 Ingest structured eFuse JSON files from a Google Drive folder using the **managed Lakeflow Connect Google Drive connector**.
 
-## Why this is first
-
-Databricks provides both managed and standard Google Drive connectors, so we can compare two ingestion abstractions against the same source without provisioning a paid external streaming service.
-
 ## Source
 
-Create one Google Drive folder:
-
 ```text
-lakeflow-connect-learning/
-  batch-001.json
+Google Drive
+  lakeflow-connect-learning/
+    batch-001.json
 ```
 
-Use `sample-data/efuse-events.json` as the contents of `batch-001.json`.
+The source file contains the sample eFuse records from `sample-data/efuse-events.json`.
 
 ## Target
 
@@ -25,52 +24,83 @@ Use `sample-data/efuse-events.json` as the contents of `batch-001.json`.
 bronze.efuse_events_managed
 ```
 
-## Prerequisites
+## What was configured
 
-- Unity Catalog enabled
-- serverless compute enabled
-- `CREATE CONNECTION` to create the connection, or `USE CONNECTION` on an existing one
-- a Google account with read access to the source folder
+- Unity Catalog Google Drive connection
+- managed ingestion pipeline
+- structured-table ingestion
+- JSON source format
+- Google Drive folder as source
+- Bronze destination table
+- pipeline event-log location
+- manual first run
 
-## Authentication
+## What was NOT implemented by us
 
-Prefer **OAuth U2M: Databricks-managed** when it is available in the workspace. It requires no Google Cloud project or custom OAuth app.
-
-## Managed pipeline configuration
-
-Conceptually:
-
-```text
-Connection: lab_google_drive_connection
-Entity: FILE
-URL: <Google Drive folder URL>
-Format: JSON
-Schema evolution: ADD_NEW_COLUMNS_WITH_TYPE_WIDENING (default)
-Destination: bronze.efuse_events_managed
-```
-
-## What we do not write
-
-We do not write:
+We did not write:
 
 - `read_files`
 - `spark.readStream`
 - Auto Loader code
 - file-discovery logic
+- explicit checkpoint handling
 - retry loops
-- checkpoint-path code
+- custom ingestion runtime code
 
-That absence is the learning point.
+## Learning result
 
-## Observation table
+This lab demonstrated the practical meaning of a **managed ingestion layer**:
 
-| Question | Observation |
+> We declared the source, source format, destination, and pipeline behavior, while Databricks operated the ingestion machinery.
+
+The important observation is not simply that there was less code. The ingestion responsibility boundary moved toward the platform.
+
+## Objects created/used
+
+```text
+Google Drive folder
+      ↓
+Unity Catalog connection
+      ↓
+Managed Lakeflow Connect pipeline
+      ├── pipeline event log / monitoring
+      └── destination streaming table
+             ↓
+      bronze.efuse_events_managed
+```
+
+## Completion checklist
+
+- [x] Google Drive source folder created
+- [x] eFuse sample JSON uploaded
+- [x] Unity Catalog connection created
+- [x] managed ingestion pipeline created
+- [x] structured-table ingestion selected
+- [x] destination configured
+- [x] pipeline executed successfully
+- [x] target table created/populated
+
+## Questions to answer before Lab 02
+
+| Question | Lab 01 observation |
 |---|---|
-| How was authentication configured? | |
-| How was the folder selected? | |
-| Where was JSON format configured? | |
-| Where was schema evolution configured? | |
-| How is incremental progress maintained? | |
-| What retry/recovery controls are exposed? | |
-| What objects did Databricks create? | |
-| How is pipeline health monitored? | |
+| Did we write ingestion SQL/code? | No |
+| Did we configure a checkpoint path? | No |
+| Did we implement file discovery? | No |
+| Did we implement retry logic? | No |
+| Where did authentication live? | Unity Catalog connection |
+| Who operated the ingestion runtime? | Databricks managed pipeline |
+| Where did business data land? | Bronze destination table |
+| Where did pipeline operational information appear? | Event log / pipeline monitoring |
+| How was JSON handling selected? | Managed connector configuration |
+| What is still our responsibility? | Source choice, format, destination, permissions, schedule/options, downstream transformations |
+
+## Next lab
+
+Proceed to:
+
+```text
+Lab 02 — Standard Google Drive ingestion
+```
+
+The same source will now be ingested using explicit `read_files` / Auto Loader semantics so we can compare the responsibility boundary directly.
