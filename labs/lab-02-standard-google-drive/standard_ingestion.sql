@@ -1,5 +1,8 @@
 -- Lab 02: standard Google Drive connector
--- Replace the source URL and connection name before execution.
+-- Requirements:
+--   Databricks Runtime 17.3+
+--   Lakeflow pipeline channel = PREVIEW
+-- Replace the source URL if you are not parameterizing it.
 
 CREATE OR REFRESH STREAMING TABLE bronze.efuse_events_standard
 AS
