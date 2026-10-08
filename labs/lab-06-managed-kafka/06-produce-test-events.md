@@ -1,16 +1,24 @@
 # Lab 06 — Produce test events
 
-The included producer is a simple SASL/PLAIN example. Adapt authentication options if your Kafka provider uses a different mechanism.
+The included producer creates synthetic eFuse events.
 
-## 1. Install dependency
+## Step 1 — Install dependency
 
-From this directory:
+From:
+
+```text
+labs/lab-06-managed-kafka
+```
+
+run:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-## 2. Set credentials locally
+---
+
+# Step 2 — Configure environment variables
 
 Copy:
 
@@ -18,38 +26,115 @@ Copy:
 cp .env.example .env
 ```
 
-Do not commit the completed `.env`.
-
-Required by the sample producer:
+The sample producer expects:
 
 ```text
 KAFKA_BOOTSTRAP_SERVERS
 KAFKA_API_KEY
 KAFKA_API_SECRET
-```
-
-Optional:
-
-```text
 KAFKA_TOPIC=efuse-events
 ```
 
-## 3. Run the producer
+Do not commit the populated `.env`.
+
+The repository's `.gitignore` excludes `.env` files.
+
+---
+
+# Step 3 — Export variables
+
+## PowerShell
+
+```powershell
+$env:KAFKA_BOOTSTRAP_SERVERS="<host:port>"
+$env:KAFKA_API_KEY="<username-or-api-key>"
+$env:KAFKA_API_SECRET="<password-or-api-secret>"
+$env:KAFKA_TOPIC="efuse-events"
+```
+
+## Bash
+
+```bash
+export KAFKA_BOOTSTRAP_SERVERS="<host:port>"
+export KAFKA_API_KEY="<username-or-api-key>"
+export KAFKA_API_SECRET="<password-or-api-secret>"
+export KAFKA_TOPIC="efuse-events"
+```
+
+---
+
+# Step 4 — Produce the initial batch BEFORE starting the pipeline
+
+Run:
 
 ```bash
 python kafka_efuse_producer.py
 ```
 
-Let it create roughly 10–20 events, then stop with Ctrl+C.
+Let it produce approximately:
 
-## Why produce before starting ingestion?
+```text
+10 records
+```
 
-The managed pipeline uses:
+Then stop with Ctrl+C.
+
+Expected delivery output:
+
+```text
+Delivered to efuse-events partition=0 offset=0
+Delivered to efuse-events partition=0 offset=1
+...
+```
+
+Write down the highest produced offset.
+
+Example:
+
+```text
+highest offset before pipeline start = 9
+```
+
+---
+
+# Why produce first?
+
+Our managed pipeline uses:
 
 ```text
 starting_offset = earliest
 ```
 
-on the first run when no checkpoint exists. This lets us verify that existing topic data is ingested.
+Therefore, on its first run with no checkpoint, it should ingest messages already present in the topic.
 
-Once checkpointed state exists, restart behavior should be driven by that state rather than reapplying the initial starting-offset instruction.
+If we used the default:
+
+```text
+latest
+```
+
+those pre-existing records would be skipped and only new messages arriving after startup would be consumed.
+
+This experiment makes `starting_offset` visible rather than theoretical.
+
+---
+
+# Step 5 — Produce live records after the pipeline starts
+
+Once the managed pipeline is running continuously, start the producer again.
+
+Produce another:
+
+```text
+5–10 events
+```
+
+The destination table should grow while the pipeline remains running.
+
+This demonstrates:
+
+```text
+continuous streaming consumption
+```
+
+rather than scheduled polling.
