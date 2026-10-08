@@ -2,15 +2,21 @@ bundle:
   name: lakeflow-connect-learning
 
 include:
-  - resources/*.yml
+  - resources/gdrive_managed_pipeline.yml
 
 variables:
   connection_name:
-    description: Unity Catalog Kafka connection name
-    default: lab_kafka_connection
+    description: Unity Catalog Google Drive connection name
+    default: lab_google_drive_connection
+
+  source_url:
+    description: Google Drive folder URL used by Lab 01
+    default: https://drive.google.com/drive/folders/REPLACE_ME
+
   dest_catalog:
     description: Destination Unity Catalog catalog
     default: main
+
   dest_schema:
     description: Destination schema
     default: bronze
