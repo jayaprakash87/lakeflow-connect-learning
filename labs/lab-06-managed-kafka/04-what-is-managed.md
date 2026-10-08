@@ -1,52 +1,69 @@
-# Lab 06 — What exactly became managed?
+# Lab 06 — What exactly is managed?
 
-After the pipeline works, do not immediately move to Lab 02.
-
-First compare what we **did not have to build**.
+Do this review only after the pipeline is running.
 
 ## Responsibility boundary
 
-| Concern | Did we implement it? | Who owns it now? | Evidence from the lab |
-|---|---:|---|---|
-| Kafka connection lifecycle | No/Minimal | Databricks + source configuration | |
-| Raw credentials in pipeline code | No | Unity Catalog connection | |
-| Structured Streaming read code | No | Managed connector | |
-| Consumer lifecycle | No | Managed connector | |
-| Starting offset configuration | Configure intent only | Managed connector/runtime | |
-| Ongoing checkpoint/state | No direct implementation | Managed connector/runtime | |
-| Restart lifecycle | No custom restart code | Managed pipeline | |
-| Serverless ingestion runtime | No cluster provisioning | Databricks | |
-| Destination streaming table creation | Declarative/configured | Lakeflow pipeline | |
-| Monitoring surface | No custom dashboard for basic health | Databricks pipeline UI | |
-| Business transformation logic | Not part of this lab | Still ours downstream | |
+| Concern | Kafka/source | Databricks managed connector |
+|---|---:|---:|
+| Broker availability | ✓ | |
+| Topic creation | ✓ | |
+| Partition count | ✓ | |
+| Retention | ✓ | |
+| Producer | ✓ | |
+| ACLs | ✓ | |
+| Unity Catalog connection | | ✓ |
+| Consumer creation/lifecycle | | ✓ |
+| Continuous serverless runtime | | ✓ |
+| Source progress/checkpoint | | ✓ |
+| Normal restart/resume | | ✓ |
+| Retry/recovery | | ✓ |
+| Destination streaming table | | ✓ |
+| Source metadata struct | | ✓ |
+| Business parsing | downstream | downstream |
 
-## The key distinction
+---
 
-Managed does **not** mean that Kafka itself disappears.
+# The biggest misconception to avoid
 
-Kafka still owns:
-
-- brokers;
-- topics;
-- partitions;
-- retention;
-- producer semantics;
-- source-side authentication and ACLs.
-
-Databricks manages the **consumer-side ingestion machinery into Databricks**.
-
-So the boundary is:
+Do not say:
 
 ```text
-Kafka responsibilities            Databricks managed ingestion
-----------------------            -----------------------------
-broker availability        →      connection consumption
-topic/partition model      →      consumer lifecycle
-message retention          →      ingestion state
-producer behavior          →      retries/recovery
-ACLs                        →      destination writes
-                                   pipeline runtime
-                                   monitoring
+Lakeflow Connect replaces Kafka.
 ```
 
-That distinction is the actual learning objective of Lab 06.
+It does not.
+
+The correct statement is:
+
+> Kafka remains the event backbone. Lakeflow Connect replaces much of the custom consumer-side ingestion plumbing needed to land those Kafka events into Databricks.
+
+---
+
+# What we did NOT write
+
+No code for:
+
+```text
+spark.readStream.format("kafka")
+consumer group lifecycle
+writeStream
+checkpointLocation
+retry loops
+offset persistence
+cluster provisioning
+destination table writer
+```
+
+But we still made architectural choices about:
+
+```text
+topic
+starting offset
+metadata exposure
+destination
+continuous runtime
+deserialization strategy
+```
+
+Managed means **less implementation ownership**, not zero design responsibility.
