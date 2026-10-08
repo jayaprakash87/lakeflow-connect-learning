@@ -1,46 +1,133 @@
-# Lab 06 — Deploy managed Kafka with a bundle
+# Lab 06 — Deploy the managed Kafka pipeline
 
-This advanced lab has its own bundle so the root repository bundle can remain focused on the current Google Drive experiment.
+## Prerequisites
 
-## Files
+Before running the bundle:
+
+- Databricks CLI installed
+- CLI authenticated to the correct workspace
+- Kafka Beta preview enabled
+- `lab_kafka_connection` exists
+- target catalog/schema exists
+- required UC privileges granted
+
+---
+
+# Step 1 — Review bundle variables
+
+Open:
 
 ```text
-labs/lab-06-managed-kafka/
-  databricks.yml
-  kafka_managed_pipeline.yml
+databricks.yml
 ```
 
-The definition declares:
+Defaults:
 
 ```text
-connection = lab_kafka_connection
-topic      = efuse-events
-start      = earliest, only when no checkpoint exists
-target     = bronze.efuse_events_managed
-mode       = continuous
-runtime    = serverless
-channel    = PREVIEW
-metadata   = _kafka_metadata
+connection_name = lab_kafka_connection
+dest_catalog     = main
+dest_schema      = bronze
 ```
 
-Notice what is not in the pipeline definition:
+Change the defaults if your learning workspace uses another catalog/schema.
 
-- Kafka password or API secret
-- `spark.readStream.format("kafka")`
-- `writeStream`
-- checkpoint path
-- cluster definition
-- retry loop
-- manual offset persistence
+Do not put Kafka secrets in this file.
 
-## Deploy
+---
 
-Run from the Lab 06 directory:
+# Step 2 — Validate the bundle
+
+From:
+
+```text
+labs/lab-06-managed-kafka
+```
+
+run:
 
 ```bash
-cd labs/lab-06-managed-kafka
 databricks bundle validate -t dev
+```
+
+Do not deploy if validation fails.
+
+Fix configuration first.
+
+---
+
+# Step 3 — Deploy
+
+Run:
+
+```bash
 databricks bundle deploy -t dev
 ```
 
-Before deployment verify the Kafka Beta preview is enabled, the Unity Catalog connection exists, target privileges are available, and serverless networking can reach Kafka.
+The deployment creates/updates:
+
+```text
+lakeflow-managed-kafka-efuse
+```
+
+---
+
+# Step 4 — Start the continuous pipeline
+
+After deployment, open:
+
+```text
+Jobs & pipelines
+  → lakeflow-managed-kafka-efuse
+```
+
+Start the pipeline if deployment did not already start it.
+
+Verify:
+
+```text
+serverless = true
+continuous = true
+channel    = PREVIEW
+```
+
+---
+
+# Step 5 — Validate ingestion
+
+Run the queries in:
+
+```text
+05-validation-queries.sql
+```
+
+You should see:
+
+```text
+key
+value
+_kafka_metadata
+```
+
+and offsets increasing as new events are produced.
+
+---
+
+# Step 6 — Do not Full Refresh before the restart experiment
+
+The next lab step tests checkpoint behavior.
+
+Use:
+
+```text
+normal stop / normal start
+```
+
+Do not:
+
+```text
+Full refresh
+Reset state
+Delete destination/checkpoint state
+```
+
+because that would intentionally change the starting-state semantics.
