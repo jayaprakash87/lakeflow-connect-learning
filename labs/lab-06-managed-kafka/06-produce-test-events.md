@@ -1,6 +1,10 @@
 # Lab 06 — Produce test events
 
+The included producer is a simple SASL/PLAIN example. Adapt authentication options if your Kafka provider uses a different mechanism.
+
 ## 1. Install dependency
+
+From this directory:
 
 ```bash
 python -m pip install -r requirements.txt
@@ -8,17 +12,15 @@ python -m pip install -r requirements.txt
 
 ## 2. Set credentials locally
 
-Copy the template:
+Copy:
 
 ```bash
 cp .env.example .env
 ```
 
-Do not commit the completed `.env` file.
+Do not commit the completed `.env`.
 
-The producer reads environment variables, so either export them in your shell or load them using your preferred local environment tooling.
-
-Required variables:
+Required by the sample producer:
 
 ```text
 KAFKA_BOOTSTRAP_SERVERS
@@ -35,36 +37,19 @@ KAFKA_TOPIC=efuse-events
 ## 3. Run the producer
 
 ```bash
-python src/generator/kafka_efuse_producer.py
+python kafka_efuse_producer.py
 ```
 
-Expected output resembles:
+Let it create roughly 10–20 events, then stop with Ctrl+C.
 
-```text
-Delivered to efuse-events partition=0 offset=0
-{"vehicle_id": "V123", ...}
-Delivered to efuse-events partition=0 offset=1
-{"vehicle_id": "V124", ...}
-```
+## Why produce before starting ingestion?
 
-Let it create roughly 10–20 events, then stop it with Ctrl+C.
-
-## Why produce data before starting ingestion?
-
-Our first managed connector run will use:
+The managed pipeline uses:
 
 ```text
 starting_offset = earliest
 ```
 
-This gives us an easy experiment:
+on the first run when no checkpoint exists. This lets us verify that existing topic data is ingested.
 
-```text
-messages already exist in Kafka
-        ↓
-start managed connector
-        ↓
-does it ingest historical messages?
-```
-
-Later we will switch our thinking to checkpoint behavior: once a checkpoint exists, restart should resume from managed state rather than reapply the initial starting-offset instruction.
+Once checkpointed state exists, restart behavior should be driven by that state rather than reapplying the initial starting-offset instruction.
