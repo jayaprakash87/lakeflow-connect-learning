@@ -1,0 +1,22 @@
+resources:
+  pipelines:
+    managed_gdrive_efuse:
+      name: lakeflow-managed-gdrive-efuse
+      serverless: true
+      channel: PREVIEW
+      catalog: ${var.dest_catalog}
+      schema: ${var.dest_schema}
+      ingestion_definition:
+        connection_name: ${var.connection_name}
+        objects:
+          - table:
+              destination_catalog: ${var.dest_catalog}
+              destination_schema: ${var.dest_schema}
+              destination_table: efuse_events_managed
+              connector_options:
+                gdrive_options:
+                  entity_type: FILE
+                  url: ${var.source_url}
+                  file_ingestion_options:
+                    format: JSON
+                    schema_evolution_mode: ADD_NEW_COLUMNS_WITH_TYPE_WIDENING
