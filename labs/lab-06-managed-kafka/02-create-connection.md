@@ -1,68 +1,120 @@
-# Lab 06 — Create the Kafka connection
+# Lab 06 — Create the Kafka Unity Catalog connection
 
-## What this step teaches
+## Objective
 
-A managed connector separates **source credentials** from **pipeline code/configuration**.
+Separate credentials/network identity from the ingestion pipeline definition.
 
-Instead of embedding Kafka credentials in Spark options, Lakeflow Connect uses a **Unity Catalog Connection**.
+---
 
-## UI path
+# Step 1 — Open connection creation
 
 In Databricks:
 
 ```text
 Catalog
   → Create
-    → Create a connection
+  → Create a connection
 ```
 
-Configure:
+---
+
+# Step 2 — Connection basics
+
+Use:
 
 ```text
-Connection name: lab_kafka_connection
-Connection type: Kafka
-Authentication: Username and Password
-Bootstrap servers: <your Kafka bootstrap server>
-Username: <Kafka username / API key>
-Password: <Kafka password / API secret>
+Connection name:
+lab_kafka_connection
+
+Connection type:
+Kafka
 ```
 
-If your Kafka environment uses a supported service credential instead, use that authentication path.
+---
 
-A schema registry is optional for our first JSON lab and is not required.
+# Step 3 — Authentication
 
-## Why this matters
+Choose the method that matches your Kafka environment.
 
-Without a managed connection, standard Spark code might contain options such as:
+## Option A — Username and Password
 
-```python
-.option("kafka.bootstrap.servers", "...")
-.option("kafka.security.protocol", "SASL_SSL")
-.option("kafka.sasl.mechanism", "PLAIN")
-.option("kafka.sasl.jaas.config", "...")
-```
+Use when your Kafka cluster authenticates using SASL/PLAIN or SASL/SCRAM.
 
-With the managed connector, authentication belongs to a governed Unity Catalog object.
-
-Conceptually:
+Enter:
 
 ```text
-Pipeline
-   │
-   └── references → lab_kafka_connection
-                         │
-                         └── credentials + endpoint
+Bootstrap servers: <broker-host:port>
+Username:          <Kafka username / API key>
+Password:          <Kafka password / API secret>
 ```
 
-A user with permission to use the connection can create ingestion pipelines without needing the raw credentials in the pipeline definition.
+## Option B — Service Credential
 
-## Observation to record
+Choose:
 
-After creating the connection, answer:
+```text
+Auth type:
+Service Credential
+```
 
-1. Where are the Kafka credentials stored?
-2. Does the pipeline author need to know the password?
-3. Which Unity Catalog privilege controls use of the connection?
-4. Can the connection be reused by another ingestion pipeline?
+Then select/create the service credential and enter the bootstrap servers.
 
-Add your answers to the observation table in the Lab 06 README.
+---
+
+# Step 4 — Schema Registry
+
+Leave schema registry blank for the first experiment.
+
+Our messages contain raw JSON, and we intentionally ingest raw Kafka key/value first.
+
+We will discuss deserialization later.
+
+---
+
+# Step 5 — Create connection
+
+Click:
+
+```text
+Create connection
+```
+
+After creation, confirm you can see:
+
+```text
+lab_kafka_connection
+```
+
+in Catalog Explorer.
+
+---
+
+# Step 6 — Understand the security boundary
+
+The pipeline definition will contain only:
+
+```text
+connection_name = lab_kafka_connection
+```
+
+It will **not** contain:
+
+- broker password;
+- API secret;
+- SASL JAAS string.
+
+A user with `USE CONNECTION` can build a pipeline without receiving the raw source password.
+
+That is one of the core managed-ingestion governance benefits.
+
+---
+
+# Record these observations
+
+| Question | Observation |
+|---|---|
+| Where are bootstrap servers stored? | |
+| Where are credentials stored? | |
+| Does YAML contain the Kafka password? | |
+| Which privilege allows pipeline use of the connection? | |
+| Can the same connection be reused? | |
