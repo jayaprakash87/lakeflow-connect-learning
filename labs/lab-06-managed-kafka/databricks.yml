@@ -1,0 +1,21 @@
+bundle:
+  name: lakeflow-connect-learning-kafka
+
+include:
+  - kafka_managed_pipeline.yml
+
+variables:
+  connection_name:
+    description: Unity Catalog Kafka connection name
+    default: lab_kafka_connection
+  dest_catalog:
+    description: Destination Unity Catalog catalog
+    default: main
+  dest_schema:
+    description: Destination schema
+    default: bronze
+
+targets:
+  dev:
+    mode: development
+    default: true
