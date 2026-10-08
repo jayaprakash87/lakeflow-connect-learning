@@ -2,18 +2,18 @@
 
 ## Objective
 
-Read the **same Google Drive folder** using the standard Google Drive connector and a Lakeflow pipeline.
+Read the **same Google Drive folder** with the standard Google Drive connector in a Lakeflow pipeline.
 
-This path uses Spark/SQL ingestion APIs such as `read_files` / Auto Loader rather than the fully managed connector.
+The standard connector exposes Spark/SQL ingestion APIs such as `read_files`, Auto Loader, `spark.read`, and `COPY INTO`.
 
-## Same inputs
+## Same inputs as Lab 01
 
-Keep these identical to Lab 01:
+Keep these identical:
 
-- Google Drive connection
+- Unity Catalog Google Drive connection
 - source folder
 - JSON files
-- logical Bronze schema
+- destination catalog/schema
 
 Target:
 
@@ -21,7 +21,19 @@ Target:
 bronze.efuse_events_standard
 ```
 
-## SQL example
+## Important runtime requirement
+
+For Google Drive in a Lakeflow pipeline:
+
+- Databricks Runtime **17.3 or later** is required.
+- Set the pipeline channel to **PREVIEW**.
+- Standard Google Drive pipeline creation is API/code based rather than UI-authored.
+
+## SQL
+
+See `standard_ingestion.sql`.
+
+The key operation is:
 
 ```sql
 CREATE OR REFRESH STREAMING TABLE bronze.efuse_events_standard
@@ -36,9 +48,9 @@ FROM STREAM read_files(
 
 ## Why this is the right comparison
 
-Authentication can still be governed through a Unity Catalog connection, so we are not comparing secure vs insecure credentials.
+Authentication remains governed through the same Unity Catalog connection.
 
-Instead, we isolate the abstraction difference:
+The variable is therefore:
 
 ```text
 Managed connector
@@ -57,6 +69,6 @@ Standard connector
 | Where is format configuration? | |
 | How is incremental file discovery handled? | |
 | How is schema evolution controlled? | |
-| What pipeline/runtime choices are visible? | |
+| Which runtime/channel requirements are visible? | |
 | What monitoring is available? | |
 | What extra flexibility do we gain? | |
