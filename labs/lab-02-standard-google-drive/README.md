@@ -2,67 +2,37 @@
 
 ## Objective
 
-Read the **same Google Drive folder** as Lab 01, but this time with the standard Google Drive connector using explicit SQL / Spark ingestion logic.
+Read the **same Google Drive folder** as Lab 01, but use the standard Google Drive connector through an **ETL pipeline** and explicit SQL.
 
-This is the direct comparison:
+The comparison is:
 
 ```text
 Lab 01
 Google Drive
-   ↓
+  ↓
+Ingestion pipeline
+  ↓
 Managed connector
-   ↓
-bronze.efuse_events_managed
+  ↓
+efuse_events_managed
 
 Lab 02
 Google Drive
-   ↓
-read_files / Auto Loader
-   ↓
-Lakeflow ETL pipeline
-   ↓
-bronze.efuse_events_standard
+  ↓
+ETL pipeline
+  ↓
+read_files(...)
+  ↓
+efuse_events_standard
 ```
-
-## Important difference from Lab 01
-
-For Lab 02, **do not create an Ingestion pipeline**.
-
-In the current Databricks UI:
-
-```text
-Jobs & pipelines
-  → Create new
-      → ETL pipeline
-```
-
-Choose **ETL pipeline**.
-
-Why:
-
-- **Ingestion pipeline** = managed connector path used in Lab 01
-- **ETL pipeline** = SQL/Python pipeline where we explicitly write ingestion logic
-- **Job** = orchestration of notebooks, pipelines, queries, etc.
-
-This UI choice is the first visible manifestation of the managed-vs-standard distinction.
-
-## Step-by-step execution
-
-### Step 1 — Reuse the Lab 01 connection
-
-Use:
-
-```text
-lab_google_drive_connection
-```
-
-Do not create another Google Drive connection.
-
-This keeps authentication constant while only the ingestion abstraction changes.
 
 ---
 
-### Step 2 — Create the correct pipeline type
+# Exact UI order
+
+This section follows the current Lakeflow Pipelines Editor.
+
+## Step 1 — Create the correct pipeline type
 
 Go to:
 
@@ -72,72 +42,196 @@ Jobs & pipelines
   → ETL pipeline
 ```
 
-Do **not** choose:
+Do **not** select **Ingestion pipeline**. That is the managed path from Lab 01.
 
-```text
-Ingestion pipeline
-```
+Databricks creates the ETL pipeline immediately and opens the Lakeflow Pipelines Editor.
 
-That would take us back to the managed connector path from Lab 01.
+---
 
-Pipeline name:
+## Step 2 — Rename the pipeline
+
+At the top-left, rename it to:
 
 ```text
 lab-standard-gdrive-efuse
 ```
 
----
-
-### Step 3 — Configure the ETL pipeline
-
-Set:
+A new pipeline contains a default source file:
 
 ```text
-Channel: PREVIEW
+transformations/
+  my_transformation.py
 ```
 
-Recommended destination defaults:
-
-```text
-Catalog: main
-Schema:  bronze
-```
-
-If your workspace uses another learning catalog, substitute it consistently.
+Do not edit it yet.
 
 ---
 
-### Step 4 — Add the source URL as pipeline configuration
+## Step 3 — Set the Default location first
 
-Do not hardcode the Google Drive URL in SQL.
-
-In the pipeline configuration / advanced configuration section, add:
+The editor initially asks for:
 
 ```text
-Key:   lab.source_url
+Default catalog
+Default schema
+```
+
+This is the screen shown immediately after creating the pipeline.
+
+Set these to the **same catalog/schema where you want the Lab 02 output table to live**.
+
+For example:
+
+```text
+Default catalog: workspace
+Default schema:  bronze
+```
+
+If Lab 01 used a different catalog/schema, use that same location instead.
+
+Then click:
+
+```text
+Save
+```
+
+### What "Default location" means
+
+It is the catalog/schema used when your SQL creates or reads an **unqualified** table name.
+
+For example:
+
+```sql
+CREATE OR REFRESH STREAMING TABLE efuse_events_standard
+```
+
+will be published as:
+
+```text
+<default_catalog>.<default_schema>.efuse_events_standard
+```
+
+This is **not** the pipeline event-log location from Lab 01.
+
+---
+
+## Step 4 — Change the transformation file from Python to SQL
+
+Select:
+
+```text
+transformations/my_transformation.py
+```
+
+At the top of the editor, use the language selector currently showing:
+
+```text
+Python
+```
+
+and change it to:
+
+```text
+SQL
+```
+
+The file will become the SQL source for this ETL pipeline.
+
+You can rename it to:
+
+```text
+standard_ingestion.sql
+```
+
+for clarity.
+
+---
+
+## Step 5 — Configure the Google Drive folder as a parameter
+
+We do not want the Drive URL hardcoded in source code.
+
+Open:
+
+```text
+Pipeline settings
+  → Parameters
+  → Edit
+```
+
+Add:
+
+```text
+Key:   source_url
 Value: <your Google Drive folder URL>
 ```
 
-For the current lab:
+Current lab value:
 
 ```text
 https://drive.google.com/drive/u/0/folders/1j26GKyWwByLrYnylUK8H48scvy-m-swj
 ```
 
----
+Then save the parameter.
 
-### Step 5 — Add the SQL source
+### Why Parameters?
 
-Use:
+The folder URL is a runtime/environment input. Pipeline parameters let the same SQL be reused with a different folder without editing Git/source code.
+
+If **Parameters** is not visible in your workspace, use **Settings → Configuration** instead:
 
 ```text
-labs/lab-02-standard-google-drive/standard_ingestion.sql
+lab.source_url = <folder URL>
 ```
 
-Core logic:
+and use the configuration-based SQL variant documented below.
+
+---
+
+## Step 6 — Set the pipeline channel to PREVIEW
+
+Open pipeline settings and set:
+
+```text
+Channel: PREVIEW
+```
+
+The standard Google Drive connector requires Databricks Runtime 17.3+ and the PREVIEW channel for Lakeflow pipelines.
+
+Keep serverless compute unless you have a specific reason to change it.
+
+---
+
+## Step 7 — Enter the SQL ingestion logic
+
+Preferred parameter-based version:
 
 ```sql
-CREATE OR REFRESH STREAMING TABLE bronze.efuse_events_standard
+CREATE OR REFRESH STREAMING TABLE efuse_events_standard
+AS
+SELECT *
+FROM STREAM read_files(
+  :source_url,
+  format => 'json',
+  `databricks.connection` => 'lab_google_drive_connection'
+);
+```
+
+Because the Default location was configured in Step 3, the table will be created there automatically.
+
+### Fallback if your workspace does not expose Pipeline Parameters
+
+If you used:
+
+```text
+Settings → Configuration
+lab.source_url = <folder URL>
+```
+
+use:
+
+```sql
+CREATE OR REFRESH STREAMING TABLE efuse_events_standard
 AS
 SELECT *
 FROM STREAM read_files(
@@ -147,75 +241,67 @@ FROM STREAM read_files(
 );
 ```
 
-This is the key difference from Lab 01:
-
-> In Lab 01, the managed connector owned the ingestion implementation.  
-> In Lab 02, we explicitly author the ingestion logic.
-
 ---
 
-### Step 6 — Run the pipeline
+## Step 8 — Run the pipeline
 
-Run:
+Click:
 
 ```text
-lab-standard-gdrive-efuse
+Run pipeline
 ```
 
-The pipeline should incrementally discover the same JSON files in the same Google Drive folder.
+The ETL pipeline should discover the same JSON file used in Lab 01 and create:
+
+```text
+<default_catalog>.<default_schema>.efuse_events_standard
+```
 
 ---
 
-### Step 7 — Validate the destination
+## Step 9 — Validate
 
-Run:
+Use the catalog/schema selected in Step 3.
+
+For example:
 
 ```sql
 SELECT *
-FROM main.bronze.efuse_events_standard;
+FROM workspace.bronze.efuse_events_standard;
 
 SELECT COUNT(*)
-FROM main.bronze.efuse_events_standard;
+FROM workspace.bronze.efuse_events_standard;
 
-DESCRIBE TABLE main.bronze.efuse_events_standard;
+DESCRIBE TABLE workspace.bronze.efuse_events_standard;
 ```
 
-With the current sample file, the expected row count is:
-
-```text
-3
-```
+The sample repository file contains three records, so the first run should produce three rows.
 
 ---
 
-### Step 8 — Compare with Lab 01
+# What to compare with Lab 01
 
 | Responsibility | Lab 01 managed | Lab 02 standard |
 |---|---|---|
-| Pipeline type in UI | Ingestion pipeline | ETL pipeline |
-| Google Drive connection | Configure | Reuse |
-| Folder URL | Wizard configuration | Pipeline configuration |
-| JSON format | Wizard configuration | SQL |
-| Ingestion table definition | Managed connector | We write it |
-| `read_files` | Hidden from us | We call it |
-| Streaming table declaration | Managed | We define it |
-| Incremental file discovery | Managed | Auto Loader/read_files semantics |
-| Runtime/channel requirement | Mostly managed | Visible to us |
-| Transformation flexibility | Lower | Higher |
+| UI entry point | Ingestion pipeline | ETL pipeline |
+| Source connection | Wizard configuration | Referenced in SQL |
+| Source folder | Wizard configuration | Pipeline parameter |
+| File format | Wizard configuration | SQL |
+| Table definition | Managed connector | Written by us |
+| `read_files` | Hidden | Explicit |
+| Default catalog/schema | Destination step | ETL Default location |
+| Runtime/channel details | More hidden | Visible |
+| Incremental discovery | Managed connector | `read_files` / Auto Loader semantics |
 | Code ownership | Very low | Higher |
 
-## What to observe carefully
-
-Do not focus only on the fact that Lab 02 has SQL.
-
-Look for the responsibility shift:
+## Core learning point
 
 ```text
 Lab 01:
-"Configure what I want."
+configure the desired ingestion
 
 Lab 02:
-"Write how Databricks should ingest it."
+author the ingestion logic
 ```
 
-That is the managed-vs-standard connector distinction we are trying to learn.
+Both use Databricks, but the **responsibility boundary** is different.
