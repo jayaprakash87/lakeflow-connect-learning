@@ -1,49 +1,46 @@
-# Lab 06 — Reproduce the managed connector as code
+# Lab 06 — Deploy managed Kafka with a bundle
 
-The managed pipeline can be defined as a Declarative Automation Bundle so the connector definition is visible and version controlled.
+This advanced lab has its own bundle so the root repository bundle can remain focused on the current Google Drive experiment.
 
 ## Files
 
-~~~text
-databricks.yml
-resources/
+```text
+labs/lab-06-managed-kafka/
+  databricks.yml
   kafka_managed_pipeline.yml
-~~~
+```
 
-## What the definition says
+The definition declares:
 
-~~~text
+```text
 connection = lab_kafka_connection
 topic      = efuse-events
-start      = earliest, only if no checkpoint exists
-target     = <catalog>.bronze.efuse_events_managed
+start      = earliest, only when no checkpoint exists
+target     = bronze.efuse_events_managed
 mode       = continuous
 runtime    = serverless
 channel    = PREVIEW
 metadata   = _kafka_metadata
-~~~
+```
 
-Notice what is not in this definition:
+Notice what is not in the pipeline definition:
 
 - Kafka password or API secret
-- spark.readStream.format("kafka")
-- writeStream
+- `spark.readStream.format("kafka")`
+- `writeStream`
 - checkpoint path
 - cluster definition
 - retry loop
 - manual offset persistence
 
-That absence is part of the managed-ingestion abstraction.
+## Deploy
 
-## Deployment commands
+Run from the Lab 06 directory:
 
-~~~bash
+```bash
+cd labs/lab-06-managed-kafka
 databricks bundle validate -t dev
 databricks bundle deploy -t dev
-~~~
+```
 
-Before deployment verify the Kafka preview is enabled, the Unity Catalog connection exists, privileges are available, and serverless networking can reach Kafka.
-
-## Learning question
-
-Compare this small declarative definition with the operational machinery visible in the Databricks pipeline UI. The gap is the managed ingestion layer.
+Before deployment verify the Kafka Beta preview is enabled, the Unity Catalog connection exists, target privileges are available, and serverless networking can reach Kafka.
