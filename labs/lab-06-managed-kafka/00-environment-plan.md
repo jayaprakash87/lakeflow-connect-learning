@@ -1,51 +1,94 @@
 # Lab 06 — Environment plan
 
-We need:
+## Goal
 
-```text
-Any Kafka endpoint reachable from Databricks serverless compute
-        ↓
-Databricks Lakeflow Connect
-```
+Use **any Kafka-compatible endpoint already available to you**.
 
-## Provider-neutral setup
+Do not buy or create a paid Kafka service solely for this lab.
 
-Do **not** create a paid Kafka account solely for this lab.
-
-Use any Kafka environment you already have access to, for example:
+Possible sources:
 
 - an existing enterprise Kafka cluster;
-- an existing Azure Event Hubs namespace using its Kafka-compatible endpoint;
-- another hosted Kafka service already available to you.
+- an existing Azure Event Hubs namespace using the Kafka-compatible endpoint;
+- another hosted Kafka service you already have access to.
 
-A Kafka broker running only on a laptop is not enough unless Databricks serverless networking can reach it.
+A Kafka broker running only on your laptop is not sufficient unless Databricks serverless networking can reach it.
 
-## Minimal Kafka setup
+---
+
+# Minimal source setup
+
+Create or identify:
 
 ```text
-Topic: efuse-events
+Topic:      efuse-events
 Partitions: 1
-Credentials: source-appropriate Kafka credentials
 ```
 
-One partition is deliberate. Partition scaling is not part of this experiment.
+One partition is deliberate so offsets are easy to inspect.
 
-## Databricks side
+For the lab you need:
 
 ```text
-Connection: lab_kafka_connection
-Catalog/schema: learning catalog + bronze
-Target: bronze.efuse_events_managed
+bootstrap servers
+authentication method
+read permission for Databricks
+write permission for your test producer
 ```
 
-## Information needed
-
-The exact credential names depend on the Kafka provider. For the included SASL/PLAIN producer example:
+The included producer assumes:
 
 ```text
-KAFKA_BOOTSTRAP_SERVERS=
-KAFKA_API_KEY=
-KAFKA_API_SECRET=
+SASL_SSL
+SASL/PLAIN
+username/API key
+password/API secret
 ```
 
-Never commit real credentials.
+If your provider uses SCRAM or another supported method, adapt the producer-side settings accordingly.
+
+---
+
+# Databricks objects
+
+We will create:
+
+```text
+Connection:
+lab_kafka_connection
+
+Pipeline:
+lab-managed-kafka-efuse
+
+Destination:
+<catalog>.bronze.efuse_events_managed
+```
+
+The destination is a streaming table.
+
+---
+
+# Security
+
+Never commit:
+
+- broker passwords;
+- API secrets;
+- private endpoints;
+- service credentials.
+
+Use:
+
+```text
+.env.example
+```
+
+only as a placeholder template.
+
+The actual Kafka credentials belong in:
+
+```text
+Unity Catalog connection
+```
+
+not in pipeline YAML.
