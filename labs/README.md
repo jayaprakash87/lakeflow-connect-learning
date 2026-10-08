@@ -1,6 +1,6 @@
 # Lab index
 
-## Current execution path
+## Execution path
 
 1. `lab-01-managed-google-drive` — managed Google Drive connector
 2. `lab-02-standard-google-drive` — standard Google Drive connector
@@ -10,6 +10,4 @@
 6. `lab-06-managed-kafka` — advanced managed Kafka
 7. `lab-07-standard-kafka` — advanced standard Kafka
 
-## Legacy Kafka material
-
-The folders `lab-01-managed-kafka` and `lab-02-standard-kafka` contain the detailed Kafka material created before the no-card execution path was selected. They are retained as source material for Labs 06 and 07 and should not be treated as the current execution order.
+The numbering reflects the learning order: begin with the lowest-friction managed-vs-standard comparison, then move to CDC and continuous event streaming.
