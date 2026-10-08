@@ -1,44 +1,57 @@
-# Managed connector vs standard/custom ingestion
+# Managed connector vs standard connector
 
-We implement the same source and the same logical target twice.
+We implement the **same Google Drive source** twice.
 
 ## Path A — Managed
 
 ```text
-Kafka
+Google Drive folder
   ↓
-Lakeflow Connect managed Kafka connector
+Lakeflow Connect managed Google Drive connector
   ↓
 bronze.efuse_events_managed
 ```
 
-We configure the connection, topic, destination, and ingestion behavior.
+We configure the Unity Catalog connection, folder URL, file format, destination, and ingestion options.
 
-## Path B — Standard/custom
+## Path B — Standard
 
 ```text
-Kafka
+Google Drive folder
   ↓
-Spark Structured Streaming
+read_files / Auto Loader
   ↓
-Lakeflow Pipeline
+Lakeflow pipeline
   ↓
 bronze.efuse_events_standard
 ```
 
-We explicitly author the ingestion code and make more decisions ourselves.
+We author the Spark/SQL ingestion logic ourselves.
 
-## What we will compare
+## What stays constant
+
+- Google Drive account and folder
+- Unity Catalog connection
+- source files
+- JSON format
+- logical Bronze data
+- destination catalog/schema
+
+## What changes
+
+Only the **ingestion abstraction**.
+
+## What we compare
 
 1. setup effort
 2. code owned by us
-3. connection/authentication model
-4. offset/checkpoint state
-5. failure recovery
-6. schema changes
-7. runtime management
+3. source configuration
+4. incremental file discovery/state
+5. retry and recovery behavior
+6. schema evolution
+7. runtime requirements
 8. monitoring
 9. operational burden
-10. flexibility and escape hatches
+10. flexibility
 
-The purpose is not to prove that managed is always better. The purpose is to understand **where the abstraction boundary moves**.
+The purpose is not to prove managed is always better. It is to see exactly where the responsibility boundary moves.
