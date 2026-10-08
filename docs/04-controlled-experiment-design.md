@@ -4,37 +4,48 @@ To learn managed ingestion correctly, change one variable at a time.
 
 ## Constant across Lab 01 and Lab 02
 
-~~~text
-Source cluster
-Topic
-Messages
-Starting position
-Logical target
-Bronze data contract
-~~~
+```text
+Google Drive account
+Unity Catalog connection
+Source folder
+Source JSON files
+Destination catalog/schema
+Logical Bronze schema
+```
 
 ## Variable
 
-~~~text
+```text
 Ingestion abstraction
-~~~
+```
 
-Lab 01 uses the managed Lakeflow Connect Kafka connector.
+### Lab 01
 
-Lab 02 uses the standard Spark/Lakeflow Kafka source.
+```text
+Managed Lakeflow Connect Google Drive connector
+```
 
-## Bronze contract
+### Lab 02
 
-Both paths retain the raw Kafka key, raw Kafka value, and Kafka position metadata.
-
-JSON parsing is deliberately downstream for the first experiment.
+```text
+Standard Google Drive connector using read_files / Auto Loader
+```
 
 ## Why this matters
 
-If the managed path parses JSON while the standard path keeps binary messages, differences in code, schema handling, and failure behavior are partly caused by transformation choices.
+If we change the source, file format, authentication model, or transformation logic at the same time, we cannot tell which differences came from the managed-ingestion abstraction.
 
-A controlled experiment lets us attribute differences to the management boundary itself.
+## First experiment
 
-## Later experiment
+Both paths ingest the same JSON files with minimal transformation.
 
-After the ingestion comparison is understood, we will deliberately enable the managed connector's JSON value transformer and schema-evolution behavior, then compare that with explicit parsing and schema handling in the standard path.
+Then we deliberately test:
+
+1. incremental arrival of a second file;
+2. restart/recovery;
+3. a new source column;
+4. schema-evolution policy.
+
+## Later experiments
+
+PostgreSQL CDC and Kafka remain valuable follow-up labs because they expose CDC positions and streaming offsets more explicitly.
