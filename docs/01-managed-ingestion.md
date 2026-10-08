@@ -1,12 +1,11 @@
 # Managed ingestion: the concept
 
-A **managed ingestion layer** lets us declare the ingestion intent while the platform owns much of the recurring operational machinery.
+A **managed ingestion layer** lets us declare ingestion intent while the platform owns more of the recurring operational machinery.
 
 ## We define
 
-- source
-- authentication/connection
-- objects/topics/tables to ingest
+- source connection
+- source object, folder, topic, or table
 - destination
 - schedule or continuous mode
 - connector-specific options
@@ -14,40 +13,45 @@ A **managed ingestion layer** lets us declare the ingestion intent while the pla
 ## The platform manages more of
 
 - incremental state
-- offsets, cursors, or CDC positions
 - retries and recovery
 - source-specific protocol behavior
 - runtime lifecycle
 - destination writes
 - monitoring
-- some schema evolution behavior
+- connector-specific schema handling
 
 The important distinction is not "code versus no code." It is **responsibility ownership**.
 
-## Imperative model
+## Current lab example
+
+### Managed
 
 ```text
-connect
-authenticate
-read state
-read new data
-handle retries
-write target
-update state
-recover after failure
+Google Drive folder
+      ↓
+Managed Google Drive connector
+      ↓
+bronze.efuse_events_managed
 ```
 
-## Managed/declarative model
+We configure the connection, folder URL, JSON format, destination, and schema-evolution policy.
+
+### Standard
 
 ```text
-Source: Kafka
-Topic: efuse-events
-Target: bronze.efuse_events_managed
-Mode: continuous
+Google Drive folder
+      ↓
+read_files / Auto Loader
+      ↓
+Lakeflow pipeline
+      ↓
+bronze.efuse_events_standard
 ```
 
-The connector owns much more of the "how."
+We explicitly author the ingestion SQL or PySpark.
 
 ## Managed does not mean zero configuration
 
-Managed ingestion still requires architectural choices. It simply moves generic ingestion mechanics from application code into the platform.
+Managed ingestion still requires architectural choices. It moves more generic ingestion mechanics from our pipeline code into the platform.
+
+Later labs repeat the same concept for PostgreSQL CDC and Kafka, where incremental positions and continuous streaming state become more explicit.
