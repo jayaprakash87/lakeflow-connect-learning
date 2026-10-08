@@ -1,52 +1,46 @@
 # Lab 06 — Environment plan
 
-We need two systems:
+We need:
 
 ```text
-Confluent Cloud Kafka
+Any Kafka endpoint reachable from Databricks serverless compute
         ↓
 Databricks Lakeflow Connect
 ```
 
-## Why Confluent Cloud for this lab
+## Provider-neutral setup
 
-We are testing the **Databricks ingestion abstraction**, not Kafka administration.
+Do **not** create a paid Kafka account solely for this lab.
 
-A hosted Kafka service gives us:
+Use any Kafka environment you already have access to, for example:
 
-- bootstrap servers;
-- SASL credentials;
-- a real Kafka topic;
-- no broker installation or maintenance.
+- an existing enterprise Kafka cluster;
+- an existing Azure Event Hubs namespace using its Kafka-compatible endpoint;
+- another hosted Kafka service already available to you.
 
-## Minimal setup
+A Kafka broker running only on a laptop is not enough unless Databricks serverless networking can reach it.
 
-### Kafka side
-
-Create:
+## Minimal Kafka setup
 
 ```text
-Cluster: lakeflow-learning
 Topic: efuse-events
 Partitions: 1
-Credentials: API key + secret
+Credentials: source-appropriate Kafka credentials
 ```
 
 One partition is deliberate. Partition scaling is not part of this experiment.
 
-### Databricks side
-
-Create:
+## Databricks side
 
 ```text
 Connection: lab_kafka_connection
-Catalog/schema: choose an existing learning catalog + bronze schema
-Target table: bronze.efuse_events_managed
+Catalog/schema: learning catalog + bronze
+Target: bronze.efuse_events_managed
 ```
 
-## Information we need before pipeline creation
+## Information needed
 
-Record these values locally; never commit secrets:
+The exact credential names depend on the Kafka provider. For the included SASL/PLAIN producer example:
 
 ```text
 KAFKA_BOOTSTRAP_SERVERS=
@@ -54,15 +48,4 @@ KAFKA_API_KEY=
 KAFKA_API_SECRET=
 ```
 
-Commit only placeholders or an `.env.example`.
-
-## Security rule
-
-Never place the API secret in:
-
-- README files;
-- notebooks committed to Git;
-- screenshots;
-- source code.
-
-The secret should be entered into the Kafka/Unity Catalog connection configuration only.
+Never commit real credentials.
