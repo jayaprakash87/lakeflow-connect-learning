@@ -2,59 +2,123 @@
 
 ## Objective
 
-Read the **same Google Drive folder** with the standard Google Drive connector in a Lakeflow pipeline.
+Read the **same Google Drive folder** as Lab 01, but this time with the standard Google Drive connector using explicit SQL / Spark ingestion logic.
 
-The standard connector exposes Spark/SQL ingestion APIs such as `read_files`, Auto Loader, `spark.read`, and `COPY INTO`.
-
-## Same inputs as Lab 01
-
-Keep these identical:
-
-- Unity Catalog Google Drive connection
-- source folder
-- JSON files
-- destination catalog/schema
-
-Target:
+This is the direct comparison:
 
 ```text
+Lab 01
+Google Drive
+   ↓
+Managed connector
+   ↓
+bronze.efuse_events_managed
+
+Lab 02
+Google Drive
+   ↓
+read_files / Auto Loader
+   ↓
+Lakeflow pipeline
+   ↓
 bronze.efuse_events_standard
 ```
 
-## Important runtime requirement
+## Important difference from Lab 01
 
-For Google Drive in a Lakeflow pipeline:
+For the standard Google Drive connector, Databricks currently does **not** support creating this custom ingestion pipeline through the same ingestion wizard.
 
-- Databricks Runtime **17.3 or later** is required.
-- Set the pipeline channel to **PREVIEW**.
+Databricks documents the standard Google Drive approach as **API/code based**. In practice, for this lab, create a normal Lakeflow pipeline and attach our SQL file.
 
-## Make the source URL configurable
+Requirements:
 
-Do **not** hardcode the Google Drive URL in the SQL file.
+- Databricks Runtime 17.3+
+- pipeline channel = `PREVIEW`
+- existing Unity Catalog Google Drive connection
+- target catalog/schema privileges
 
-In the Lakeflow pipeline settings, add a configuration entry:
+## Step-by-step execution
+
+### Step 1 — Reuse the Lab 01 connection
+
+Use:
+
+```text
+lab_google_drive_connection
+```
+
+Do not create another Google Drive connection.
+
+This is deliberate: authentication stays constant while the ingestion abstraction changes.
+
+---
+
+### Step 2 — Create a new Lakeflow pipeline
+
+In Databricks, go to the Lakeflow / Jobs & Pipelines area and create a new **pipeline**.
+
+Use:
+
+```text
+Pipeline name:
+lab-standard-gdrive-efuse
+```
+
+This is a standard Lakeflow pipeline, not the managed Google Drive ingestion wizard used in Lab 01.
+
+---
+
+### Step 3 — Configure the pipeline
+
+Set:
+
+```text
+Channel: PREVIEW
+```
+
+For destination defaults, use the same learning catalog/schema pattern as Lab 01.
+
+Recommended:
+
+```text
+Catalog: main
+Schema:  bronze
+```
+
+If your workspace uses another learning catalog, substitute it consistently.
+
+---
+
+### Step 4 — Add the source URL as pipeline configuration
+
+Do not hardcode the Google Drive URL in the SQL.
+
+In the pipeline configuration / advanced configuration section, add:
 
 ```text
 Key:   lab.source_url
 Value: <your Google Drive folder URL>
 ```
 
-Example:
+For your current lab:
 
 ```text
-lab.source_url =
 https://drive.google.com/drive/u/0/folders/1j26GKyWwByLrYnylUK8H48scvy-m-swj
 ```
 
-The SQL then references it with pipeline configuration interpolation:
+This keeps workspace-specific values out of committed code.
 
-```sql
-'${lab.source_url}'
+---
+
+### Step 5 — Add the SQL source file
+
+Use the SQL in:
+
+```text
+labs/lab-02-standard-google-drive/standard_ingestion.sql
 ```
 
-See `standard_ingestion.sql`.
-
-## SQL
+The core logic is:
 
 ```sql
 CREATE OR REFRESH STREAMING TABLE bronze.efuse_events_standard
@@ -67,48 +131,77 @@ FROM STREAM read_files(
 );
 ```
 
-## Why this is better
+This is the key point of Lab 02:
 
-The repository stays reusable:
+> We are now explicitly authoring the ingestion behavior.
 
-```text
-Code in GitHub
-      +
-User/workspace-specific configuration
-      ↓
-Executable pipeline
-```
+In Lab 01, the managed connector generated/operated this ingestion logic for us.
 
-The Google Drive folder can change without changing or recommitting pipeline code.
+---
 
-This also gives us a useful architectural lesson:
+### Step 6 — Run the pipeline
 
-> **Configuration values belong outside code when they vary by user, workspace, or environment.**
-
-## Why this is the right managed-vs-standard comparison
-
-Authentication remains governed through the same Unity Catalog connection.
-
-The variable is therefore:
+Run:
 
 ```text
-Managed connector
-  → configure ingestion intent
-
-Standard connector
-  → author Spark/SQL ingestion behavior
+lab-standard-gdrive-efuse
 ```
 
-## Observation table
+The pipeline should incrementally discover the JSON files in the same Google Drive folder.
 
-| Question | Observation |
-|---|---|
-| Did we write ingestion SQL/code? | |
-| Where did the source URL live? | Pipeline configuration |
-| Who invokes `read_files`? | |
-| Where is format configuration? | |
-| How is incremental file discovery handled? | |
-| How is schema evolution controlled? | |
-| Which runtime/channel requirements are visible? | |
-| What monitoring is available? | |
-| What extra flexibility do we gain? | |
+---
+
+### Step 7 — Validate the destination
+
+Run:
+
+```sql
+SELECT *
+FROM main.bronze.efuse_events_standard;
+
+SELECT COUNT(*)
+FROM main.bronze.efuse_events_standard;
+
+DESCRIBE TABLE main.bronze.efuse_events_standard;
+```
+
+With the current sample file, the expected row count is:
+
+```text
+3
+```
+
+---
+
+### Step 8 — Compare with Lab 01
+
+Now compare:
+
+| Responsibility | Lab 01 managed | Lab 02 standard |
+|---|---|---|
+| Google Drive connection | Configure | Reuse |
+| Folder URL | Wizard configuration | Pipeline configuration |
+| JSON format | Wizard configuration | SQL |
+| Ingestion table definition | Managed connector | We write it |
+| `read_files` | Hidden from us | We call it |
+| Streaming table declaration | Managed | We define it |
+| Incremental file discovery | Managed | Auto Loader/read_files semantics |
+| Runtime/channel requirement | Mostly managed | Visible to us |
+| Transformation flexibility | Lower | Higher |
+| Code ownership | Very low | Higher |
+
+## What to observe carefully
+
+Do not focus only on the fact that Lab 02 has SQL.
+
+Look for the responsibility shift:
+
+```text
+Lab 01:
+"Configure what I want."
+
+Lab 02:
+"Write how Databricks should ingest it."
+```
+
+That is the managed-vs-standard connector distinction we are trying to learn.
