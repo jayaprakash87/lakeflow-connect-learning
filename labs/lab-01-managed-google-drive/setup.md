@@ -2,45 +2,62 @@
 
 ## 1. Prepare the source folder
 
-In Google Drive, create a folder named:
+In Google Drive, create:
 
 ```text
 lakeflow-connect-learning
 ```
 
-Upload a file named `batch-001.json` containing newline-delimited JSON records from `sample-data/efuse-events.json`.
+Upload `batch-001.json` containing the newline-delimited records from `sample-data/efuse-events.json`.
 
-Copy the Google Drive folder URL.
+Copy the **folder URL**. The managed connector expects a folder or shared-drive URL, not an individual file URL.
 
 ## 2. Create the Unity Catalog connection
 
-In Databricks, create a **Google Drive** connection.
+In Databricks:
 
-Preferred authentication for this lab:
+```text
+Catalog
+  → Create
+    → Create a connection
+      → Google Drive
+```
+
+Preferred authentication:
 
 ```text
 OAuth U2M: Databricks-managed
 ```
 
-This avoids creating a Google Cloud project or registering a custom OAuth application.
+If that option is not enabled in the workspace, use one of the other supported Google Drive authentication methods.
 
-## 3. Create managed ingestion
-
-Create a Lakeflow Connect managed Google Drive ingestion pipeline using:
+Use the connection name:
 
 ```text
-Source:       Google Drive connection
-Entity:       FILE
+lab_google_drive_connection
+```
+
+## 3. Create the managed ingestion pipeline
+
+The managed Google Drive connector supports UI-based pipeline authoring.
+
+Configure:
+
+```text
+Source:       lab_google_drive_connection
 URL:          <Google Drive folder URL>
+Entity type:  FILE
 Format:       JSON
 Destination:  bronze.efuse_events_managed
 ```
 
-Use the default managed schema-evolution behavior for the first run. We will change it deliberately in Lab 04.
+For the first run, keep the default schema-evolution mode:
+
+```text
+ADD_NEW_COLUMNS_WITH_TYPE_WIDENING
+```
 
 ## 4. Run and validate
-
-Query:
 
 ```sql
 SELECT *
@@ -49,15 +66,15 @@ FROM bronze.efuse_events_managed;
 DESCRIBE TABLE bronze.efuse_events_managed;
 ```
 
-Record the row count and target schema.
+Record the row count and inferred schema.
 
 ## 5. Inspect the managed objects
 
 Find:
 
-- Unity Catalog connection;
-- ingestion pipeline;
-- destination streaming table;
-- pipeline event/monitoring information.
+- Unity Catalog connection
+- ingestion pipeline
+- destination streaming table
+- pipeline event/monitoring information
 
-Do not move to Lab 02 until you can explain which of these objects replaces logic that would otherwise live in Spark/SQL code.
+Do not move to Lab 02 until you can explain which parts of ingestion were configured by you and which parts were operated by Databricks.
